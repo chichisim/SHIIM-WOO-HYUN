@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { X, CheckCircle2, Loader2 } from 'lucide-react';
-import { Button } from './Button';
+import React, { useState, useEffect } from 'react';
+import { X, CheckCircle2, Loader2, ChevronRight } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 
 interface ReservationModalProps {
@@ -11,6 +10,7 @@ interface ReservationModalProps {
 export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onClose }) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [formData, setFormData] = useState({
     parentName: '',
     phone: '',
@@ -19,29 +19,35 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
     concern: ''
   });
 
-  if (!isOpen) return null;
+  // Handle animation states
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true);
+      document.body.style.overflow = 'hidden';
+    } else {
+      const timer = setTimeout(() => setIsVisible(false), 300);
+      document.body.style.overflow = 'unset';
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  if (!isVisible && !isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     // EmailJS Configuration
-    // 무료로 자동 메일 발송 기능을 사용하려면 https://www.emailjs.com/ 에서 계정을 생성하고
-    // 아래 키 값들을 교체해주세요.
     const serviceId = 'YOUR_SERVICE_ID';
     const templateId = 'YOUR_TEMPLATE_ID';
     const publicKey = 'YOUR_PUBLIC_KEY';
-    
-    // 받는 사람 이메일
     const targetEmail = 'chichi0714@naver.com';
 
     try {
-      // 키가 설정되어 있지 않다면 에러를 발생시켜 Fallback(메일 앱 열기)으로 이동합니다.
       if (serviceId === 'YOUR_SERVICE_ID') {
         throw new Error('EmailJS keys are not configured');
       }
 
-      // EmailJS를 통한 이메일 전송 시도
       await emailjs.send(serviceId, templateId, {
         to_email: targetEmail,
         parent_name: formData.parentName,
@@ -51,14 +57,10 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
         concern: formData.concern,
       }, publicKey);
 
-      // 전송 성공
       setIsSubmitted(true);
 
     } catch (error) {
-      console.log('EmailJS 전송 실패 또는 미설정. 메일 앱을 엽니다.', error);
-
-      // Fallback: 기본 메일 앱 열기 (mailto)
-      // 사용자의 메일 클라이언트가 열리며 내용이 채워집니다.
+      console.log('Fallback to mailto', error);
       const subject = encodeURIComponent(`[학부모 상담 신청] ${formData.parentName} 학부모님`);
       const body = encodeURIComponent(
         `[상담 신청 내역]\n\n` +
@@ -69,10 +71,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
         `■ 상담 희망 내용:\n${formData.concern}\n\n` +
         `위 내용을 바탕으로 상담을 신청합니다.`
       );
-
       window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
-      
-      // UI상으로는 완료 처리
       setIsSubmitted(true);
     } finally {
       setIsLoading(false);
@@ -80,102 +79,109 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 sm:px-6">
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-4 sm:px-6 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {/* Backdrop with blur */}
       <div 
-        className="absolute inset-0 bg-black/90 backdrop-blur-sm transition-opacity duration-300"
+        className="absolute inset-0 bg-black/60 backdrop-blur-md"
         onClick={onClose}
       />
       
-      <div className="relative bg-neutral-950 border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl transition-all duration-300 animate-[fadeIn_0.3s_ease-out]">
+      {/* Modal Card - Apple Style: Dark Gray, Rounded Corners, Subtle Border */}
+      <div className={`relative bg-[#1c1c1e] w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] shadow-2xl border border-white/10 transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-8'}`}>
+        
+        {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors z-10 bg-black/50 rounded-full p-1"
+          className="absolute top-6 right-6 bg-[#2c2c2e] hover:bg-[#3a3a3c] text-[#86868b] hover:text-white transition-colors rounded-full p-2 z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="p-8 md:p-10">
+        <div className="p-8 md:p-12">
           {isSubmitted ? (
-            <div className="text-center py-20 space-y-6">
-              <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
-                <CheckCircle2 className="w-10 h-10 text-green-500" />
+            <div className="text-center py-12 flex flex-col items-center animate-[fadeIn_0.5s_ease-out]">
+              <div className="w-24 h-24 bg-gradient-to-br from-green-400/20 to-green-600/20 rounded-full flex items-center justify-center mb-8 border border-green-500/30 shadow-[0_0_30px_rgba(74,222,128,0.15)]">
+                <CheckCircle2 className="w-12 h-12 text-green-500" />
               </div>
-              <h3 className="text-2xl md:text-3xl font-bold text-white">상담 신청이 완료되었습니다.</h3>
-              <p className="text-gray-400 leading-relaxed font-light">
-                학부모님의 소중한 고민,<br />
-                확인 후 <strong>{formData.phone}</strong> 번호로<br /> 
-                빠르게 연락드리겠습니다.
+              <h3 className="text-3xl font-bold text-white mb-4 tracking-tight">예약이 완료되었습니다.</h3>
+              <p className="text-[#86868b] text-lg leading-relaxed mb-10">
+                작성해주신 내용을 바탕으로<br />
+                담당 컨설턴트가 빠르게 연락드리겠습니다.
               </p>
-              <Button onClick={onClose} className="mt-8 min-w-[200px]">
+              <button 
+                onClick={onClose} 
+                className="bg-white text-black hover:bg-gray-100 px-10 py-4 rounded-full font-semibold text-lg transition-all hover:scale-[1.02] active:scale-95"
+              >
                 확인
-              </Button>
+              </button>
             </div>
           ) : (
             <>
-              <div className="mb-10 text-center md:text-left">
-                <span className="text-xs font-bold text-blue-500 tracking-widest uppercase mb-3 block">Parent Consultation</span>
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">학부모 상담 예약</h2>
-                <p className="text-gray-400 font-light text-sm md:text-base break-keep leading-relaxed">
-                  학생의 성적 향상을 위한 첫걸음입니다.<br className="hidden md:block"/>
-                  현재 상황을 남겨주시면 심층 분석을 통해 1:1 맞춤 솔루션을 제공해 드립니다.
+              <div className="mb-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-[#0071e3]"></span>
+                  <span className="text-xs font-bold text-[#0071e3] tracking-widest uppercase">Reservation</span>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight">학부모 상담 예약</h2>
+                <p className="text-[#86868b] text-base md:text-lg font-normal leading-relaxed">
+                  학생의 현재 상황을 남겨주시면, <br className="hidden md:block" />
+                  0.1%를 위한 맞춤 커리큘럼을 제안해 드립니다.
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300 block">학부모님 성함</label>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid md:grid-cols-2 gap-5">
+                  <InputGroup label="학부모님 성함" placeholder="성함을 입력해 주세요">
                     <input 
                       required
                       type="text" 
-                      className="w-full bg-black border border-white/10 rounded-sm p-3.5 text-white focus:border-white/60 focus:ring-1 focus:ring-white/60 transition-all outline-none placeholder:text-gray-800 font-light"
+                      className="w-full bg-transparent outline-none text-white placeholder-[#555] font-normal"
                       placeholder="성함을 입력해 주세요"
                       value={formData.parentName}
                       onChange={(e) => setFormData({...formData, parentName: e.target.value})}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300 block">연락처</label>
+                  </InputGroup>
+                  
+                  <InputGroup label="연락처" placeholder="010-0000-0000">
                     <input 
                       required
                       type="tel" 
-                      className="w-full bg-black border border-white/10 rounded-sm p-3.5 text-white focus:border-white/60 focus:ring-1 focus:ring-white/60 transition-all outline-none placeholder:text-gray-800 font-light"
+                      className="w-full bg-transparent outline-none text-white placeholder-[#555] font-normal"
                       placeholder="010-0000-0000"
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
                     />
-                  </div>
+                  </InputGroup>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300 block">학생 이름</label>
+                <div className="grid md:grid-cols-2 gap-5">
+                  <InputGroup label="학생 이름" placeholder="이름 입력">
                     <input 
                       required
                       type="text" 
-                      className="w-full bg-black border border-white/10 rounded-sm p-3.5 text-white focus:border-white/60 focus:ring-1 focus:ring-white/60 transition-all outline-none placeholder:text-gray-800 font-light"
-                      placeholder="학생 이름을 입력해 주세요"
+                      className="w-full bg-transparent outline-none text-white placeholder-[#555] font-normal"
+                      placeholder="이름 입력"
                       value={formData.studentName}
                       onChange={(e) => setFormData({...formData, studentName: e.target.value})}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300 block">학교 / 학년</label>
+                  </InputGroup>
+                  
+                  <InputGroup label="학교 / 학년" placeholder="예) 서울고 3학년">
                     <input 
                       required
                       type="text" 
-                      className="w-full bg-black border border-white/10 rounded-sm p-3.5 text-white focus:border-white/60 focus:ring-1 focus:ring-white/60 transition-all outline-none placeholder:text-gray-800 font-light"
+                      className="w-full bg-transparent outline-none text-white placeholder-[#555] font-normal"
                       placeholder="예) 서울고 3학년"
                       value={formData.schoolInfo}
                       onChange={(e) => setFormData({...formData, schoolInfo: e.target.value})}
                     />
-                  </div>
+                  </InputGroup>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-300 block">상담 희망 내용</label>
+                <div className="bg-[#2c2c2e] rounded-2xl p-4 focus-within:ring-2 focus-within:ring-[#0071e3] transition-all duration-300">
+                  <label className="text-xs font-medium text-[#86868b] block mb-2 ml-1">상담 희망 내용</label>
                   <textarea 
-                    className="w-full bg-black border border-white/10 rounded-sm p-3.5 text-white focus:border-white/60 focus:ring-1 focus:ring-white/60 transition-all outline-none min-h-[120px] resize-none placeholder:text-gray-800 font-light"
+                    className="w-full bg-transparent outline-none text-white placeholder-[#555] min-h-[120px] resize-none font-normal leading-relaxed"
                     placeholder="현재 등급, 취약한 파트(문학/비문학 등), 목표 대학 등 상담받고 싶은 내용을 자유롭게 적어주세요."
                     value={formData.concern}
                     onChange={(e) => setFormData({...formData, concern: e.target.value})}
@@ -183,22 +189,25 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
                 </div>
 
                 <div className="pt-4">
-                  <Button 
+                  <button 
                     type="submit" 
-                    className="w-full bg-white text-black hover:bg-gray-200 border-transparent font-bold py-4 rounded-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-white text-black hover:bg-[#f5f5f7] rounded-full py-4 font-bold text-lg transition-all duration-300 hover:scale-[1.01] active:scale-[0.98] shadow-[0_0_20px_rgba(255,255,255,0.1)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     disabled={isLoading}
                   >
                     {isLoading ? (
-                      <span className="flex items-center gap-2">
+                      <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        전송 중...
-                      </span>
+                        <span>처리 중...</span>
+                      </>
                     ) : (
-                      "상담 예약 신청하기"
+                      <>
+                        <span>예약 신청하기</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </>
                     )}
-                  </Button>
-                  <p className="text-center text-[11px] text-gray-600 mt-4 font-light">
-                    * 신청해주신 정보는 상담 예약 확인 용도로만 사용되며, 상담 완료 후 안전하게 파기됩니다.
+                  </button>
+                  <p className="text-center text-[11px] text-[#6e6e73] mt-4 font-normal">
+                    입력하신 정보는 상담 목적으로만 사용되며, 안전하게 보호됩니다.
                   </p>
                 </div>
               </form>
@@ -209,3 +218,11 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
     </div>
   );
 };
+
+// Helper Component for consistent input styling
+const InputGroup: React.FC<{ label: string; placeholder: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="bg-[#2c2c2e] rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-[#0071e3] transition-all duration-300 group">
+    <label className="text-xs font-medium text-[#86868b] block mb-1 ml-1 group-focus-within:text-[#0071e3] transition-colors">{label}</label>
+    {children}
+  </div>
+);
