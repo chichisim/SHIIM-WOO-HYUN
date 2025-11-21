@@ -1,6 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, Loader2, ChevronRight } from 'lucide-react';
-import emailjs from '@emailjs/browser';
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -37,45 +37,25 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
     e.preventDefault();
     setIsLoading(true);
 
-    // EmailJS Configuration
-    const serviceId = 'YOUR_SERVICE_ID';
-    const templateId = 'YOUR_TEMPLATE_ID';
-    const publicKey = 'YOUR_PUBLIC_KEY';
-    const targetEmail = 'chichi0714@naver.com';
-
-    try {
-      if (serviceId === 'YOUR_SERVICE_ID') {
-        throw new Error('EmailJS keys are not configured');
-      }
-
-      await emailjs.send(serviceId, templateId, {
-        to_email: targetEmail,
-        parent_name: formData.parentName,
-        phone: formData.phone,
-        student_name: formData.studentName,
-        school_info: formData.schoolInfo,
-        concern: formData.concern,
-      }, publicKey);
-
-      setIsSubmitted(true);
-
-    } catch (error) {
-      console.log('Fallback to mailto', error);
-      const subject = encodeURIComponent(`[학부모 상담 신청] ${formData.parentName} 학부모님`);
-      const body = encodeURIComponent(
+    // Simulate a brief processing delay for better UX, then open mail client
+    setTimeout(() => {
+      const targetEmail = 'chichi0714@naver.com';
+      const subject = `[학부모 상담 신청] ${formData.parentName} 학부모님`;
+      const body = 
         `[상담 신청 내역]\n\n` +
         `■ 학부모 성함: ${formData.parentName}\n` +
         `■ 연락처: ${formData.phone}\n` +
         `■ 학생 이름: ${formData.studentName}\n` +
         `■ 학교/학년: ${formData.schoolInfo}\n` +
         `■ 상담 희망 내용:\n${formData.concern}\n\n` +
-        `위 내용을 바탕으로 상담을 신청합니다.`
-      );
-      window.location.href = `mailto:${targetEmail}?subject=${subject}&body=${body}`;
-      setIsSubmitted(true);
-    } finally {
+        `위 내용을 바탕으로 상담을 신청합니다.`;
+
+      // Encode URI components to ensure special characters are handled correctly
+      window.location.href = `mailto:${targetEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      
       setIsLoading(false);
-    }
+      setIsSubmitted(true);
+    }, 800);
   };
 
   return (
@@ -103,10 +83,11 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
               <div className="w-24 h-24 bg-gradient-to-br from-green-400/20 to-green-600/20 rounded-full flex items-center justify-center mb-8 border border-green-500/30 shadow-[0_0_30px_rgba(74,222,128,0.15)]">
                 <CheckCircle2 className="w-12 h-12 text-green-500" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-4 tracking-tight">예약이 완료되었습니다.</h3>
+              <h3 className="text-3xl font-bold text-white mb-4 tracking-tight">메일 앱이 실행되었습니다.</h3>
               <p className="text-[#86868b] text-lg leading-relaxed mb-10">
-                작성해주신 내용을 바탕으로<br />
-                담당 컨설턴트가 빠르게 연락드리겠습니다.
+                작성된 내용을 확인 후<br />
+                <span className="text-white font-semibold">전송 버튼</span>을 눌러주세요.<br />
+                <span className="text-sm mt-2 block text-[#666]">(메일이 발송되어야 예약이 확정됩니다)</span>
               </p>
               <button 
                 onClick={onClose} 
@@ -125,7 +106,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight">학부모 상담 예약</h2>
                 <p className="text-[#86868b] text-base md:text-lg font-normal leading-relaxed">
                   학생의 현재 상황을 남겨주시면, <br className="hidden md:block" />
-                  0.1%를 위한 맞춤 커리큘럼을 제안해 드립니다.
+                  맞춤 클리닉을 제안해 드립니다.
                 </p>
               </div>
 
@@ -171,7 +152,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
                       required
                       type="text" 
                       className="w-full bg-transparent outline-none text-white placeholder-[#555] font-normal"
-                      placeholder="예) 서울고 3학년"
+                      placeholder="예) 홍천여고 3학년"
                       value={formData.schoolInfo}
                       onChange={(e) => setFormData({...formData, schoolInfo: e.target.value})}
                     />
@@ -197,18 +178,23 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({ isOpen, onCl
                     {isLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>처리 중...</span>
+                        <span>연동 중...</span>
                       </>
                     ) : (
                       <>
-                        <span>예약 신청하기</span>
+                        <span>예약 메일 보내기</span>
                         <ChevronRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
-                  <p className="text-center text-[11px] text-[#6e6e73] mt-4 font-normal">
-                    입력하신 정보는 상담 목적으로만 사용되며, 안전하게 보호됩니다.
-                  </p>
+                  <div className="text-center mt-4 flex flex-col gap-1">
+                    <p className="text-[11px] text-[#6e6e73] font-normal">
+                      버튼을 누르면 메일 앱이 실행됩니다.
+                    </p>
+                    <p className="text-xs text-[#86868b]">
+                      혹은 <a href="sms:01041776925" className="text-[#f5f5f7] hover:underline decoration-1 underline-offset-2">010-4177-6925</a>로 문자 주세요.
+                    </p>
+                  </div>
                 </div>
               </form>
             </>
